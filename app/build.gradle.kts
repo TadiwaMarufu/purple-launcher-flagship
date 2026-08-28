@@ -29,7 +29,8 @@ android {
       val storePasswordEnv = System.getenv("STORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
       val keyAliasEnv = System.getenv("KEY_ALIAS") ?: "upload"
       val keyPasswordEnv = System.getenv("KEY_PASSWORD") ?: storePasswordEnv
-      if (keystorePath != null && file(keystorePath).exists() && storePasswordEnv != null) {
+
+      if (!keystorePath.isNullOrBlank() && file(keystorePath).exists() && storePasswordEnv != null) {
         storeFile = file(keystorePath)
         storePassword = storePasswordEnv
         keyAlias = keyAliasEnv
