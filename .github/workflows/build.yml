@@ -31,19 +31,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew || true
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v3
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --continue --no-daemon --stacktrace
+        run: gradle testDebugUnitTest --continue --no-daemon --stacktrace
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Setup Release Keystore (if secrets provided)
         env:
@@ -60,7 +59,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
@@ -87,4 +86,5 @@ jobs:
           prerelease: false
           generate_release_notes: true
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
