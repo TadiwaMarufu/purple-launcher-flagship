@@ -1,4 +1,4 @@
-name: Android Release Build
+name: Android CI & Release Build
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
     tags:
       - "v*"
       - "[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 concurrency:
@@ -13,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-release:
-    name: Build & Release APK
+  build:
+    name: Build & Test APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -30,22 +32,53 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew || true
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - name: Create local .env if absent
+        run: |
+          if [ ! -f .env ]; then
+            cp .env.example .env || touch .env
+          fi
+
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --continue --no-daemon --stacktrace
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Setup Release Keystore (if secrets provided)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 || secrets.RELEASE_KEYSTORE_BASE64 || secrets.SIGNING_KEY }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding release keystore..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > "${{ github.workspace }}/release-key.jks"
+            echo "KEYSTORE_PATH=${{ github.workspace }}/release-key.jks" >> $GITHUB_ENV
+          else
+            echo "No custom release keystore secret found. Gradle build will generate/use fallback release signing."
+          fi
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon --stacktrace --info
         env:
-          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: purple-launcher-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
@@ -58,7 +91,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/*.apk
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
           draft: false
           prerelease: false
           generate_release_notes: true

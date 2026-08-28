@@ -60,9 +60,17 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      val releaseSigning = signingConfigs.getByName("release")
+      if (releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
+        signingConfig = releaseSigning
+      }
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      val debugSigning = signingConfigs.getByName("debugConfig")
+      if (debugSigning.storeFile != null && debugSigning.storeFile!!.exists()) {
+        signingConfig = debugSigning
+      }
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
