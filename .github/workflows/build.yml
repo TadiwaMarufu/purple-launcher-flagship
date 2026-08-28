@@ -36,34 +36,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
 
-      - name: Decode Release Keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "ERROR: KEYSTORE_BASE64 secret is not configured"
-            echo "Please add the following secrets to your repository:"
-            echo "  - KEYSTORE_BASE64 (base64 encoded keystore file)"
-            echo "  - KEYSTORE_PASSWORD"
-            echo "  - KEY_ALIAS"
-            echo "  - KEY_PASSWORD"
-            exit 1
-          fi
-          echo "Decoding keystore file..."
-          echo "$KEYSTORE_BASE64" | base64 --decode > "${{ github.workspace }}/release.jks"
-          if [ ! -f "${{ github.workspace }}/release.jks" ]; then
-            echo "ERROR: Failed to decode keystore file"
-            exit 1
-          fi
-          echo "KEYSTORE_PATH=${{ github.workspace }}/release.jks" >> $GITHUB_ENV
-          echo "Keystore file created successfully"
-
       - name: Build Release APK
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Upload Release APK Artifact
