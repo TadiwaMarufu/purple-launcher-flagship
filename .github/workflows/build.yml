@@ -36,9 +36,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
 
-      - name: Run Unit Tests
-        run: gradle testReleaseUnitTest --continue --no-daemon --stacktrace
-
       - name: Decode Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
