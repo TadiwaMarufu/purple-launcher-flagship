@@ -16,6 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.purplelauncher.core.model.*
+import com.example.purplelauncher.core.repository.IconPackManager
+import com.example.purplelauncher.core.repository.InstalledIconPack
 import com.example.purplelauncher.core.repository.SettingsRepository
 import com.example.purplelauncher.ui.components.GlassCard
 import com.example.purplelauncher.ui.theme.parseColorHex
@@ -47,19 +51,27 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val iconPackManager = remember { IconPackManager(context) }
+    var installedPacks by remember { mutableStateOf<List<InstalledIconPack>>(emptyList()) }
+
     var showImportDialog by remember { mutableStateOf(false) }
     var importJsonText by remember { mutableStateOf("") }
     var importStatusMessage by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(Unit) {
+        installedPacks = iconPackManager.getInstalledIconPacks()
+    }
+
     val accentColors = listOf(
-        "#D0BCFF", "#A855F7", "#C084FC", "#9333EA",
-        "#818CF8", "#38BDF8", "#F472B6", "#FB923C", "#4ADE80", "#E2E8F0"
+        "#38BDF8", "#2DD4BF", "#22C55E", "#F59E0B",
+        "#EF4444", "#F43F5E", "#EC4899", "#A855F7",
+        "#818CF8", "#C084FC", "#E2E8F0", "#18181B"
     )
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Color(0xFF090A0F))
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
@@ -74,29 +86,28 @@ fun SettingsScreen(
         ) {
             Column {
                 Text(
-                    text = "Launcher Settings",
+                    text = "Launcher Customization",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.White
                 )
                 Text(
-                    text = "Personalize design, grid, gestures & telemetry",
+                    text = "Presets, icon engines, gestures & widgets",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    color = Color.White.copy(alpha = 0.6f)
                 )
             }
 
             IconButton(onClick = onCloseSettings) {
-                Text(
-                    "✕",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White
                 )
             }
         }
 
-        Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        Divider(color = Color.White.copy(alpha = 0.15f))
 
         Column(
             modifier = Modifier
@@ -125,9 +136,7 @@ fun SettingsScreen(
                             } catch (_: Exception) {}
                         }
                     },
-                shape = RoundedCornerShape(16.dp),
-                backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -136,67 +145,131 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Set as Default Home",
+                            text = "Set as Default Home Launcher",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Open system settings to select The Purple Launcher",
+                            text = "Tap to open system settings and select this launcher",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            color = Color.White.copy(alpha = 0.7f)
                         )
                     }
-                    Text(
-                        "➔",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            // Theme Mode
-            SectionHeader("Theme & Visual Identity")
+            // 1. One-Click Complete Theme Presets
+            SectionHeader("Theme Presets (Inspired by Top UIs)")
 
-            val themeModes = remember { ThemeMode.values().toList() }
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(themeModes) { mode ->
-                    val isSelected = themeConfig.themeMode == mode
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .clickable {
-                                onUpdateTheme(themeConfig.copy(themeMode = mode))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(ThemePreset.values()) { preset ->
+                    val isSelected = preset == themeConfig.activePreset
+                    Surface(
+                        onClick = {
+                            val newConfig = when (preset) {
+                                ThemePreset.NEO_OBSIDIAN -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#38BDF8",
+                                    iconStyle = IconStyle.GLOSSY_SQUIRCLE,
+                                    iconShape = IconShape.SQUIRCLE,
+                                    clockStyle = ClockStyle.TALL_CONDENSED
+                                )
+                                ThemePreset.ONEUI_FROSTED_GLASS -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#2DD4BF",
+                                    iconStyle = IconStyle.ORIGINAL_VIBRANT,
+                                    iconShape = IconShape.ROUNDED,
+                                    clockStyle = ClockStyle.TALL_CONDENSED
+                                )
+                                ThemePreset.NOTHING_DOT_MATRIX -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#EF4444",
+                                    iconStyle = IconStyle.NOTHING_DOT_GLYPH,
+                                    iconShape = IconShape.CIRCLE,
+                                    clockStyle = ClockStyle.NOTHING_DOT_MATRIX
+                                )
+                                ThemePreset.EMERALD_FOREST -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#22C55E",
+                                    iconStyle = IconStyle.THEMED_TINTED,
+                                    iconShape = IconShape.SQUIRCLE,
+                                    clockStyle = ClockStyle.SPLIT_CAPSULE
+                                )
+                                ThemePreset.PARISIAN_EDITORIAL -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#F43F5E",
+                                    iconStyle = IconStyle.EDITORIAL_OUTLINE,
+                                    iconShape = IconShape.CIRCLE,
+                                    clockStyle = ClockStyle.EDITORIAL_STACK
+                                )
+                                ThemePreset.WIDGETSMITH_AESTHETIC -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#A855F7",
+                                    iconStyle = IconStyle.MONOCHROME_DARK,
+                                    iconShape = IconShape.SQUIRCLE,
+                                    clockStyle = ClockStyle.MINIMAL_SERIF
+                                )
+                                ThemePreset.CYBER_VIBRANT -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#C084FC",
+                                    iconStyle = IconStyle.NEON_GLOW,
+                                    iconShape = IconShape.HEXAGON,
+                                    clockStyle = ClockStyle.TALL_CONDENSED
+                                )
+                                ThemePreset.MATERIAL_YOU_DYNAMIC -> themeConfig.copy(
+                                    activePreset = preset,
+                                    primaryAccentHex = "#60A5FA",
+                                    iconStyle = IconStyle.THEMED_TINTED,
+                                    iconShape = IconShape.PEBBLE,
+                                    clockStyle = ClockStyle.DIGITAL_PILL
+                                )
                             }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            onUpdateTheme(newConfig)
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f),
+                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+                        modifier = Modifier.width(160.dp).height(80.dp)
                     ) {
-                        Text(
-                            text = mode.displayName,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                        )
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = preset.displayName,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = preset.subtitle,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                color = Color.White.copy(alpha = 0.7f),
+                                maxLines = 2
+                            )
+                        }
                     }
                 }
             }
 
-            // Accent Color Palette
-            Text(
-                text = "Purple Accent Tone",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-            )
+            // 2. Accent Color Palette
+            SectionHeader("Accent Tone")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(accentColors) { hex ->
-                    val color = parseColorHex(hex, Color.Magenta)
+                    val color = parseColorHex(hex, Color.Cyan)
                     val isSelected = themeConfig.primaryAccentHex.equals(hex, ignoreCase = true)
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(color)
                             .border(
@@ -211,41 +284,86 @@ fun SettingsScreen(
                 }
             }
 
-            // Icon Shapes & Properties
-            SectionHeader("Icon Aesthetics")
+            // 3. Icon Styles & Shapes
+            SectionHeader("Icon Customization & Icon Packs")
 
-            val shapes = remember { IconShape.values().toList() }
+            Text(
+                text = "Icon Render Engine",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(shapes) { shape ->
+                items(IconStyle.values()) { style ->
+                    val isSelected = themeConfig.iconStyle == style
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onUpdateTheme(themeConfig.copy(iconStyle = style)) },
+                        label = { Text(style.displayName) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = Color.White.copy(alpha = 0.08f),
+                            labelColor = Color.White
+                        )
+                    )
+                }
+            }
+
+            Text(
+                text = "Icon Shape Mask",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(IconShape.values()) { shape ->
                     val isSelected = themeConfig.iconShape == shape
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onUpdateTheme(themeConfig.copy(iconShape = shape)) },
+                        label = { Text(shape.displayName) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = Color.White.copy(alpha = 0.08f),
+                            labelColor = Color.White
+                        )
+                    )
+                }
+            }
+
+            // Third-Party Icon Packs Support
+            if (installedPacks.isNotEmpty()) {
+                Text(
+                    text = "Installed Third-Party Icon Packs",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(installedPacks) { pack ->
+                        val isSelected = themeConfig.selectedIconPackPackage == pack.packageName
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                onUpdateTheme(
+                                    themeConfig.copy(
+                                        selectedIconPackPackage = if (isSelected) null else pack.packageName
+                                    )
+                                )
+                            },
+                            label = { Text(pack.name) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = Color.White.copy(alpha = 0.08f),
+                                labelColor = Color.White
                             )
-                            .clickable {
-                                onUpdateTheme(themeConfig.copy(iconShape = shape))
-                            }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = shape.displayName,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
-
-            SettingToggleRow(
-                title = "Monochrome Icon Filter",
-                subtitle = "Apply pure desaturation to all third-party app icons",
-                checked = themeConfig.iconMonochrome,
-                onCheckedChange = { onUpdateTheme(themeConfig.copy(iconMonochrome = it)) }
-            )
 
             SettingToggleRow(
                 title = "Show App Labels",
@@ -254,35 +372,57 @@ fun SettingsScreen(
                 onCheckedChange = { onUpdateTheme(themeConfig.copy(showLabels = it)) }
             )
 
-            // Grid & Dock
-            SectionHeader("Grid & Layout")
-
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Grid Columns (${themeConfig.gridCols})", style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(3, 4, 5).forEach { cols ->
-                        FilledTonalButton(
-                            onClick = { onUpdateTheme(themeConfig.copy(gridCols = cols)) },
-                            colors = if (themeConfig.gridCols == cols) ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) else ButtonDefaults.filledTonalButtonColors()
-                        ) {
-                            Text(cols.toString())
-                        }
-                    }
-                }
-            }
+            // 4. Gestures Configuration
+            SectionHeader("Gestures & Touch Controls")
 
             SettingToggleRow(
-                title = "Bottom Dock",
-                subtitle = "Display persistent glass dock on home screen",
+                title = "Double Tap on Empty Space",
+                subtitle = "Instantly sleep/lock the device display",
+                checked = themeConfig.doubleTapAction == GestureAction.LOCK_SCREEN,
+                onCheckedChange = { isChecked ->
+                    onUpdateTheme(
+                        themeConfig.copy(
+                            doubleTapAction = if (isChecked) GestureAction.LOCK_SCREEN else GestureAction.NONE
+                        )
+                    )
+                }
+            )
+
+            SettingToggleRow(
+                title = "Swipe Down for Control Center",
+                subtitle = "Pull down quick settings panel with volume & brightness sliders",
+                checked = themeConfig.swipeDownAction == GestureAction.OPEN_CONTROL_CENTER,
+                onCheckedChange = { isChecked ->
+                    onUpdateTheme(
+                        themeConfig.copy(
+                            swipeDownAction = if (isChecked) GestureAction.OPEN_CONTROL_CENTER else GestureAction.NONE
+                        )
+                    )
+                }
+            )
+
+            SettingToggleRow(
+                title = "Swipe Left for News & Now Feed",
+                subtitle = "Morning brief, breaking stories & daily glance",
+                checked = themeConfig.feedEnabled,
+                onCheckedChange = { onUpdateTheme(themeConfig.copy(feedEnabled = it)) }
+            )
+
+            SettingToggleRow(
+                title = "Now Playing Music Bar",
+                subtitle = "Interactive track player pill on home screen",
+                checked = themeConfig.nowPlayingBarEnabled,
+                onCheckedChange = { onUpdateTheme(themeConfig.copy(nowPlayingBarEnabled = it)) }
+            )
+
+            SettingToggleRow(
+                title = "Persistent Bottom Dock",
+                subtitle = "Display glass dock container on home screen",
                 checked = themeConfig.dockVisible,
                 onCheckedChange = { onUpdateTheme(themeConfig.copy(dockVisible = it)) }
             )
 
-            // Backup & Restore Section
+            // 5. Backup & Restore
             SectionHeader("Backup & Configuration")
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -310,24 +450,6 @@ fun SettingsScreen(
                 )
             }
 
-            // About Footer
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "The Purple Launcher v0.1",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "\"Android, in your own frequency.\"",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
             Spacer(modifier = Modifier.height(24.dp))
         }
 
@@ -401,12 +523,12 @@ private fun SettingToggleRow(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.White
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                color = Color.White.copy(alpha = 0.6f)
             )
         }
         Switch(

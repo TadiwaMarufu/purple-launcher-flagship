@@ -66,7 +66,7 @@ fun AppDrawerScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
+            .background(Color(0xFF090A0F).copy(alpha = 0.97f))
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
@@ -82,9 +82,9 @@ fun AppDrawerScreen(
                 onValueChange = { searchQuery = it },
                 placeholder = {
                     Text(
-                        "Filter applications...",
+                        "Search all apps & tools...",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        color = Color.White.copy(alpha = 0.5f)
                     )
                 },
                 singleLine = true,
@@ -97,10 +97,12 @@ fun AppDrawerScreen(
                 ),
                 shape = RoundedCornerShape(24.dp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    focusedContainerColor = Color.White.copy(alpha = 0.12f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.08f),
                     focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
                 ),
                 modifier = Modifier
                     .weight(1f)
@@ -134,7 +136,7 @@ fun AppDrawerScreen(
                         .clip(RoundedCornerShape(16.dp))
                         .background(
                             if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            else Color.White.copy(alpha = 0.1f)
                         )
                         .clickable { selectedCategory = category }
                         .padding(horizontal = 14.dp, vertical = 6.dp)
@@ -143,7 +145,7 @@ fun AppDrawerScreen(
                         text = category.displayName,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White
                     )
                 }
             }
@@ -162,7 +164,7 @@ fun AppDrawerScreen(
                 Text(
                     text = "No applications found",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    color = Color.White.copy(alpha = 0.5f)
                 )
             }
         } else {
@@ -177,9 +179,9 @@ fun AppDrawerScreen(
                 items(visibleApps, key = { it.packageName }) { app ->
                     AppIconView(
                         app = app,
+                        iconStyle = themeConfig.iconStyle,
                         iconShape = themeConfig.iconShape,
                         iconSizeDp = themeConfig.iconSizeDp,
-                        isMonochrome = themeConfig.iconMonochrome,
                         showLabel = themeConfig.showLabels,
                         showFavoriteBadge = true,
                         onClick = { onLaunchApp(app) },

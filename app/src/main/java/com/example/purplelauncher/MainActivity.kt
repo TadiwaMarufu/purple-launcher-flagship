@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
             val allSpaces by profileRepo.allSpaces.collectAsStateWithLifecycle(initialValue = emptyList())
             val themeConfig by settingsRepo.themeConfig.collectAsStateWithLifecycle(initialValue = ThemeConfig())
             val gestureConfig by settingsRepo.gestureConfig.collectAsStateWithLifecycle(initialValue = GestureConfig())
+            val activeWidgets by settingsRepo.activeWidgets.collectAsStateWithLifecycle(initialValue = emptyList())
             val isOnboardingCompleted by settingsRepo.isOnboardingCompleted.collectAsStateWithLifecycle(initialValue = true)
 
             // UI Flow State
@@ -117,6 +118,7 @@ class MainActivity : ComponentActivity() {
                                     activeProfile = activeProfile,
                                     installedApps = installedApps,
                                     themeConfig = themeConfig,
+                                    activeWidgets = activeWidgets,
                                     activeSpaces = allSpaces,
                                     onLaunchApp = { appInfo ->
                                         scope.launch {
@@ -133,6 +135,31 @@ class MainActivity : ComponentActivity() {
                                         currentScreen = LauncherScreen.DEVELOPER_HUB
                                     },
                                     onOpenSettings = { currentScreen = LauncherScreen.SETTINGS },
+                                    onUpdateThemeConfig = { newTheme ->
+                                        scope.launch {
+                                            settingsRepo.updateThemeConfig(newTheme)
+                                        }
+                                    },
+                                    onAddWidget = { type, span ->
+                                        scope.launch {
+                                            settingsRepo.addWidget(type, span)
+                                        }
+                                    },
+                                    onRemoveWidget = { widgetId ->
+                                        scope.launch {
+                                            settingsRepo.removeWidget(widgetId)
+                                        }
+                                    },
+                                    onUpdateWidgetSpan = { widgetId, span ->
+                                        scope.launch {
+                                            settingsRepo.updateWidgetSpan(widgetId, span)
+                                        }
+                                    },
+                                    onMoveWidget = { widgetId, direction ->
+                                        scope.launch {
+                                            settingsRepo.moveWidget(widgetId, direction)
+                                        }
+                                    },
                                     onAppLongClick = { appInfo -> selectedAppForMenu = appInfo },
                                     onCustomizeHome = { currentScreen = LauncherScreen.WALLPAPER_STUDIO }
                                 )

@@ -38,6 +38,102 @@ class SettingsRepository(private val context: Context) {
         val GESTURE_DOUBLE_TAP = stringPreferencesKey("gesture_double_tap")
         val GESTURE_LONG_PRESS = stringPreferencesKey("gesture_long_press")
         val GESTURE_TWO_FINGER = stringPreferencesKey("gesture_two_finger")
+
+        val ACTIVE_WIDGETS_JSON = stringPreferencesKey("active_widgets_json")
+    }
+
+    private fun getDefaultWidgets(): List<ActiveHomeWidget> {
+        return listOf(
+            ActiveHomeWidget(type = WidgetType.NOW_PLAYING, span = WidgetSpan.WIDE),
+            ActiveHomeWidget(type = WidgetType.LIVE_WEATHER, span = WidgetSpan.WIDE),
+            ActiveHomeWidget(type = WidgetType.MULTI_BATTERY, span = WidgetSpan.WIDE),
+            ActiveHomeWidget(type = WidgetType.DEVICE_CARE, span = WidgetSpan.MEDIUM),
+            ActiveHomeWidget(type = WidgetType.FITNESS_TRACKER, span = WidgetSpan.MEDIUM),
+            ActiveHomeWidget(type = WidgetType.QUICK_TOGGLES, span = WidgetSpan.WIDE),
+            ActiveHomeWidget(type = WidgetType.DIGITAL_WELLBEING, span = WidgetSpan.WIDE),
+            ActiveHomeWidget(type = WidgetType.AGENDA_CALENDAR, span = WidgetSpan.WIDE),
+            ActiveHomeWidget(type = WidgetType.QUICK_NOTES, span = WidgetSpan.MEDIUM),
+            ActiveHomeWidget(type = WidgetType.GEMINI_ASSISTANT, span = WidgetSpan.WIDE),
+            ActiveHomeWidget(type = WidgetType.PHOTO_FRAME, span = WidgetSpan.MEDIUM),
+            ActiveHomeWidget(type = WidgetType.CRYPTO_MARKET, span = WidgetSpan.MEDIUM)
+        )
+    }
+
+    val activeWidgets: Flow<List<ActiveHomeWidget>> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { prefs ->
+            val jsonStr = prefs[PreferencesKeys.ACTIVE_WIDGETS_JSON]
+            if (jsonStr.isNullOrBlank()) {
+                getDefaultWidgets()
+            } else {
+                try {
+                    val array = JSONArray(jsonStr)
+                    val list = mutableListOf<ActiveHomeWidget>()
+                    for (i in 0 until array.length()) {
+                        val obj = array.getJSONObject(i)
+                        val id = obj.optString("id", java.util.UUID.randomUUID().toString())
+                        val typeName = obj.getString("type")
+                        val type = WidgetType.valueOf(typeName)
+                        val spanName = obj.optString("span", type.defaultSpan.name)
+                        val span = try { WidgetSpan.valueOf(spanName) } catch (_: Exception) { type.defaultSpan }
+                        val customTitle = if (obj.has("customTitle")) obj.getString("customTitle") else null
+                        val isEnabled = obj.optBoolean("isEnabled", true)
+                        list.add(ActiveHomeWidget(id, type, span, customTitle, isEnabled))
+                    }
+                    if (list.isEmpty()) getDefaultWidgets() else list
+                } catch (_: Exception) {
+                    getDefaultWidgets()
+                }
+            }
+        }
+
+    suspend fun saveActiveWidgets(widgets: List<ActiveHomeWidget>) {
+        val array = JSONArray()
+        for (w in widgets) {
+            val obj = JSONObject()
+            obj.put("id", w.id)
+            obj.put("type", w.type.name)
+            obj.put("span", w.span.name)
+            if (w.customTitle != null) obj.put("customTitle", w.customTitle)
+            obj.put("isEnabled", w.isEnabled)
+            array.put(obj)
+        }
+        context.dataStore.edit { prefs ->
+            prefs[PreferencesKeys.ACTIVE_WIDGETS_JSON] = array.toString()
+        }
+    }
+
+    suspend fun addWidget(type: WidgetType, span: WidgetSpan = type.defaultSpan) {
+        val current = activeWidgets.first().toMutableList()
+        current.add(ActiveHomeWidget(type = type, span = span))
+        saveActiveWidgets(current)
+    }
+
+    suspend fun removeWidget(widgetId: String) {
+        val current = activeWidgets.first().filter { it.id != widgetId }
+        saveActiveWidgets(current)
+    }
+
+    suspend fun updateWidgetSpan(widgetId: String, span: WidgetSpan) {
+        val current = activeWidgets.first().map {
+            if (it.id == widgetId) it.copy(span = span) else it
+        }
+        saveActiveWidgets(current)
+    }
+
+    suspend fun moveWidget(widgetId: String, direction: Int) {
+        val current = activeWidgets.first().toMutableList()
+        val index = current.indexOfFirst { it.id == widgetId }
+        if (index != -1) {
+            val newIndex = index + direction
+            if (newIndex in 0 until current.size) {
+                val item = current.removeAt(index)
+                current.add(newIndex, item)
+                saveActiveWidgets(current)
+            }
+        }
     }
 
     val themeConfig: Flow<ThemeConfig> = context.dataStore.data
